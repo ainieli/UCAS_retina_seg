@@ -1,7 +1,7 @@
 ## 执行顺序
-1. 确定数据集是DRIVE还是CHASEDB2，对不同文件的init_xxx()进行选择
+1. 确定数据集是DRIVE还是CHASEDB1，对不同文件的init_xxx()进行选择
 
-2. 设定数据划分(DRIVE 40张/CHASEDB2 28张分为训练集，验证集和测试集)，并运行UNet_preprocess.py
+2. 设定数据划分(DRIVE 40张/CHASEDB1 28张分为训练集，验证集和测试集)，并运行UNet_preprocess.py
 
 3. 在代码里面修改注释项来选择模型是UNet还是UNet++
 
@@ -20,6 +20,6 @@
 
 3. UNet++代码逻辑（训练与测试）是否通顺未进行测试，欢迎测试
 
-4. CHASEDB2测试逻辑是否通顺未进行测试，欢迎测试
+4. CHASEDB1测试逻辑是否通顺未进行测试，欢迎测试
 
 5. 有什么想法和建议可以发在群里大家一起讨论下
