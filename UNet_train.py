@@ -232,14 +232,20 @@ if __name__ == "__main__":
 
     if MODEL == 'UNET':
         model = U_Net(input_size=img_size + (1,), lr=lr, wd=weight_decay)
+        # 定义模型的保存路径与监督优化的方式
+        model_checkpoint = ModelCheckpoint(model_path,
+                                           monitor='val_accuracy',
+                                           verbose=1,
+                                           save_best_only=False)
     elif MODEL == 'UNET++':
         model = U_Net_plus_plus(input_size=img_size + (1,),
                                 deep_supervision=False, lr=lr, wd=weight_decay)
-    # 定义模型的保存路径与监督优化的方式
-    model_checkpoint = ModelCheckpoint(model_path,
-                                       monitor='val_accuracy',
-                                       verbose=1,
-                                       save_best_only=False)
+        # 定义模型的保存路径与监督优化的方式
+        model_checkpoint = ModelCheckpoint(contrast_model_path,
+                                           monitor='val_accuracy',
+                                           verbose=1,
+                                           save_best_only=False)
+
     # 定义模型的验证集生成器
     validation_gen = validation_generator(valid_dir_path,
                                           valid_label_dir_path,
