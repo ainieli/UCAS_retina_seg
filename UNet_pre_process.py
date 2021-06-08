@@ -23,12 +23,25 @@ def init_DRIVE():
     test_original_label_dir_path = './RAW_DATA/DRIVE/test/1st_manual/'       # 当DRIVE测试集部分图像作为训练数据时，对应的标签路径
 
     # 经过处理的数据路径
+
     train_dir_path = './retina_train/train/'
     label_dir_path = './retina_train/label/'
     test_dir_path = './retina_test/'
     test_label_dir_path = './retina_test_label/'
     valid_dir_path = './retina_train/valid/'
     valid_label_dir_path = './retina_train/valid_label/'
+    try:
+        os.mkdir("./retina_train")
+        os.mkdir(test_dir_path)
+        os.mkdir(test_label_dir_path)
+        os.mkdir(train_dir_path)
+        os.mkdir(label_dir_path)
+        os.mkdir(valid_dir_path)
+        os.mkdir(valid_label_dir_path)
+    except:
+        clear_file("./retina_train")
+        clear_file(test_dir_path)
+        clear_file(test_label_dir_path)
 
     # 定义图像大小
     # img_size = (256, 256)           # 模型输入图像的尺寸
@@ -54,12 +67,25 @@ def init_CHASE():
     test_original_label_dir_path = './RAW_DATA/CHASE/test/1st_manual/'  # 当DRIVE测试集部分图像作为训练数据时，对应的标签路径
 
     # 经过处理的数据路径
+
     train_dir_path = './retina_train_chase/train/'
     label_dir_path = './retina_train_chase/label/'
     test_dir_path = './retina_test_chase/'
     test_label_dir_path = './retina_test_label_chase/'
     valid_dir_path = './retina_train_chase/valid/'
     valid_label_dir_path = './retina_train_chase/valid_label/'
+    try:
+        os.mkdir("./retina_train_chase")
+        os.mkdir(test_dir_path)
+        os.mkdir(test_label_dir_path)
+        os.mkdir(train_dir_path)
+        os.mkdir(label_dir_path)
+        os.mkdir(valid_dir_path)
+        os.mkdir(valid_label_dir_path)
+    except:
+        clear_file("./retina_train_chase")
+        clear_file(test_dir_path)
+        clear_file(test_label_dir_path)
 
     # 定义图像大小
     # img_size = (256, 256)           # 模型输入图像的尺寸
@@ -83,13 +109,8 @@ def clear_file(path):
 if __name__ == "__main__":
 
     # 清除源文件
-    # init_DRIVE()
-    # clear_file("./retina_train")
-    init_CHASE()
-    clear_file("./retina_train_chase")
-
-    clear_file(test_dir_path)
-    clear_file(test_label_dir_path)
+    init_DRIVE()
+    # init_CHASE()
 
     # 对DRIVE训练集、验证集和测试集张数分配合理性的检验
     if train_img_num + validation_img_num + test_img_num != total_train_original_img_num:
@@ -99,8 +120,10 @@ if __name__ == "__main__":
     # 读取 ./DRIVE/training/images/ 文件夹中的视网膜数据
     # 默认该目录下所有图片都是训练集
     for img_name in os.listdir(train_original_dir_path):
-        img = plt.imread(train_original_dir_path + img_name)          # 此处获取RGB图像，通道对应axis=2
+        img = cv2.imread(train_original_dir_path + img_name, cv2.IMREAD_COLOR)          # 此处获取RGB图像，通道对应axis=2
+        # img = plt.imread(train_original_dir_path + img_name)          # 此处获取RGB图像，通道对应axis=2
         # img = cv2.resize(img, img_size)
+        img = img[:, :, 1]
         if img_name[0:2] == 'Im':
             plt.imsave(train_dir_path + img_name[6:9] + '.jpg', img)
         else:
@@ -123,8 +146,10 @@ if __name__ == "__main__":
     # 读取部分训练集/测试集/验证集数据
     # 根据validation_img_num、train_img_num、test_img_num决定该目录下图像的分配
     for i, img_name in enumerate(sorted(os.listdir(test_original_dir_path))):
-        img = plt.imread(test_original_dir_path + img_name)
+        img = cv2.imread(test_original_dir_path + img_name, cv2.IMREAD_COLOR)
+        # img = plt.imread(test_original_dir_path + img_name)
         # img = cv2.resize(img, img_size)
+        img = img[:, :, 1]
         if i < test_img_num:
             if img_name[0:2] == 'Im':
                 plt.imsave(test_dir_path + img_name[6:9] + '.jpg', img)

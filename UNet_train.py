@@ -23,7 +23,7 @@ def init_DRIVE():
     global train_dir_root_path, valid_dir_path, valid_label_dir_path, \
         img_size, original_size, model_path, contrast_model_path, \
         total_train_original_img_num, train_img_num, validation_img_num, \
-        test_img_num, lr, weight_decay, epochs
+        test_img_num, lr, weight_decay, epochs, steps_per_epoch, batch_size
 
     # 数据路径
     train_dir_root_path = './retina_train/'
@@ -43,18 +43,21 @@ def init_DRIVE():
     train_img_num = 20                      # 训练集张数，至少大于等于DRIVE的一半，即至少20
     validation_img_num = 10                 # 验证集张数
     test_img_num = 10                       # 测试集张数
+    batch_size = 2
 
     # 定义超参数
     lr = 1e-4
     weight_decay = 1e-4
-    epochs = 150
+    epochs = 100
+    steps_per_epoch = 150
+    # steps_per_epoch = train_img_num // batch_size
 
 
 def init_CHASE():
     global train_dir_root_path, valid_dir_path, valid_label_dir_path, \
         img_size, original_size, model_path, contrast_model_path, \
         total_train_original_img_num, train_img_num, validation_img_num, \
-        test_img_num, lr, weight_decay, epochs
+        test_img_num, lr, weight_decay, epochs, steps_per_epoch, batch_size
     # 数据路径
     train_dir_root_path = './retina_train/'
     valid_dir_path = './retina_train/valid/'
@@ -73,11 +76,14 @@ def init_CHASE():
     train_img_num = 20                 # 训练集张数
     validation_img_num = 4             # 验证集张数
     test_img_num = 4                   # 测试集张数
+    batch_size = 2
 
     # 定义超参数
     lr = 1e-4
     weight_decay = 1e-4
-    epochs = 150
+    epochs = 100
+    steps_per_epoch = 150
+    # steps_per_epoch = train_img_num // batch_size
 
 
 ########## 训练集增强相关 ##########
@@ -104,7 +110,7 @@ def adjust_img(img, mask):
             label1
             ...
 """
-def train_generator(batch_size, train_path, image_folder, label_folder, aug_dict, image_color_mode="rgb",
+def train_generator(batch_size, train_path, image_folder, label_folder, aug_dict, image_color_mode="grayscale",
                     label_color_mode="grayscale", target_size=(256, 256), seed=1):
     # 定义图像生成器
     image_datagen = ImageDataGenerator(**aug_dict)          # 原图生成器
@@ -135,28 +141,30 @@ def train_generator(batch_size, train_path, image_folder, label_folder, aug_dict
         img, mask = adjust_img(img, mask)
         yield (img, mask)
 
-# # 不使用data augment的generator
-# def train_generator(train_path, train_label_path, num_image=train_img_num, target_size=(256, 256)):
-#     train_img_name_list = os.listdir('./retina_train/train')
-#     train_label_name_list = os.listdir('./retina_train/label')
-#     for i in range(num_image):
-#         img = cv2.imread(train_path + train_img_name_list[i], cv2.IMREAD_COLOR)
-#         label = cv2.imread(train_label_path + train_label_name_list[i], cv2.IMREAD_GRAYSCALE)
-#         # img = io.imread(validation_path + valid_img_name_list[i], as_gray=True)
-#         # label = io.imread(valid_label_path + valid_label_name_list[i], as_gray=True)
-#
-#         img = cv2.resize(img, target_size)
-#         # img = np.expand_dims(img, axis=2)
-#         img = np.expand_dims(img, axis=0)
-#         img = np.array(img, np.uint8)                     # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
-#
-#         label = cv2.resize(label, target_size)
-#         label = np.expand_dims(label, axis=2)
-#         label = np.expand_dims(label, axis=0)
-#         label = np.array(label, np.uint8)                 # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
-#
-#         img, label = adjust_img(img, label)     # 对成对的图像进行处理后抛出
-#         yield (img, label)
+
+# 不使用data augment的generator
+def train_generator_no_aug(train_path, train_label_path, num_image, target_size, epochs):
+    train_img_name_list = os.listdir('./retina_train/train')
+    train_label_name_list = os.listdir('./retina_train/label')
+    for _ in range(epochs):
+        for i in range(num_image):
+            img = cv2.imread(train_path + train_img_name_list[i], cv2.IMREAD_GRAYSCALE)
+            label = cv2.imread(train_label_path + train_label_name_list[i], cv2.IMREAD_GRAYSCALE)
+            # img = io.imread(validation_path + valid_img_name_list[i], as_gray=True)
+            # label = io.imread(valid_label_path + valid_label_name_list[i], as_gray=True)
+
+            img = cv2.resize(img, target_size)
+            # img = np.expand_dims(img, axis=2)
+            img = np.expand_dims(img, axis=0)
+            img = np.array(img, np.uint8)                     # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
+
+            label = cv2.resize(label, target_size)
+            label = np.expand_dims(label, axis=2)
+            label = np.expand_dims(label, axis=0)
+            label = np.array(label, np.uint8)                 # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
+
+            img, label = adjust_img(img, label)     # 对成对的图像进行处理后抛出
+            yield (img, label)
 
 
 
@@ -165,103 +173,170 @@ def train_generator(batch_size, train_path, image_folder, label_folder, aug_dict
 ########## 验证集相关 ##########
 # 定义验证集生成器
 # 验证集生成器实际完成读取验证集图片的工作，成对读取原图与标签
-def validation_generator(validation_path, valid_label_path, num_image=10, target_size=(256, 256)):
+def validation_generator(validation_path, valid_label_path, num_image=10, target_size=(256, 256), epochs=100):
     valid_img_name_list = os.listdir(valid_dir_path)
     valid_label_name_list = os.listdir(valid_label_dir_path)
-    for i in range(num_image):
-        img = cv2.imread(validation_path + valid_img_name_list[i], cv2.IMREAD_COLOR)
-        label = cv2.imread(valid_label_path + valid_label_name_list[i], cv2.IMREAD_GRAYSCALE)
+    for _ in range(epochs):
+        for i in range(num_image):
+            img = cv2.imread(validation_path + valid_img_name_list[i], cv2.IMREAD_GRAYSCALE)
+            label = cv2.imread(valid_label_path + valid_label_name_list[i], cv2.IMREAD_GRAYSCALE)
 
-        img = cv2.resize(img, target_size)
-        # img = np.expand_dims(img, axis=2)
-        img = np.expand_dims(img, axis=0)
-        img = np.array(img, np.uint8)                     # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
+            img = cv2.resize(img, target_size)
+            # img = np.expand_dims(img, axis=2)
+            img = np.expand_dims(img, axis=0)
+            img = np.array(img, np.uint8)                     # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
 
-        label = cv2.resize(label, target_size)
-        label = np.expand_dims(label, axis=2)
-        label = np.expand_dims(label, axis=0)
-        label = np.array(label, np.uint8)                 # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
+            label = cv2.resize(label, target_size)
+            label = np.expand_dims(label, axis=2)
+            label = np.expand_dims(label, axis=0)
+            label = np.array(label, np.uint8)                 # 转化图像格式，由于读入的为float32型，需要转化成uint8，保证输入网络的图像格式正确
 
-        img, label = adjust_img(img, label)     # 对成对的图像进行处理后抛出
-        yield (img, label)
+            img, label = adjust_img(img, label)     # 对成对的图像进行处理后抛出
+            yield (img, label)
 
 
 
 ########## 正式训练部分 ##########
 if __name__ == "__main__":
     # 初始化一些变量
-    # init_DRIVE()
-    init_CHASE()
+    init_DRIVE()
+    # init_CHASE()
+    USE_AUGMENT = True
+    MODEL = 'UNET'
 
-    # 定义训练集生成器的参数，保证生成的图像包括了旋转、平移等变化
-    data_gen_args = dict(featurewise_center=True,
-                         featurewise_std_normalization=True,
-                         rotation_range=90,
-                         width_shift_range=0.1,
-                         height_shift_range=0.1,
-                         shear_range=0.05,
-                         zoom_range=0.05,
-                         horizontal_flip=True,
-                         fill_mode='nearest')
-    # 定义训练集生成器
-    train_gen = train_generator(batch_size=2,
-                               train_path=train_dir_root_path[:-1],
-                               image_folder='train',
-                               label_folder='label',
-                               target_size=img_size,
-                               aug_dict=data_gen_args)
+    if USE_AUGMENT:
+        # 定义训练集生成器的参数，保证生成的图像包括了旋转、平移等变化
+        data_gen_args = dict(featurewise_center=True,
+                             featurewise_std_normalization=True,
+                             rotation_range=90,
+                             width_shift_range=0.1,
+                             height_shift_range=0.1,
+                             shear_range=0.05,
+                             zoom_range=0.05,
+                             horizontal_flip=True,
+                             fill_mode='nearest')
+        # 定义训练集生成器
+        train_gen = train_generator(batch_size=batch_size,
+                                    train_path=train_dir_root_path[:-1],
+                                    image_folder='train',
+                                    label_folder='label',
+                                    target_size=img_size,
+                                    aug_dict=data_gen_args)
+    else:
+        # 不使用data augment的生成器
+        train_gen = train_generator_no_aug('./retina_train/train',
+                                    './retina_train/label',
+                                    num_image=train_img_num,
+                                    target_size=img_size,
+                                    epochs=epochs)
 
-    # # 不使用data augment的生成器
-    # train_gen = train_generator('./retina_train/train',
-    #                             './retina_train/label',
-    #                             num_image=train_img_num,
-    #                             target_size=img_size)
-
-    # 定义模型，默认输入为img_size尺寸
-    model = U_Net(input_size=img_size + (3,), lr=lr, wd=weight_decay)
+    if MODEL == 'UNET':
+        model = U_Net(input_size=img_size + (1,), lr=lr, wd=weight_decay)
+    elif MODEL == 'UNET++':
+        model = U_Net_plus_plus(input_size=img_size + (1,),
+                                deep_supervision=False, lr=lr, wd=weight_decay)
     # 定义模型的保存路径与监督优化的方式
     model_checkpoint = ModelCheckpoint(model_path,
                                        monitor='val_accuracy',
                                        verbose=1,
-                                       save_best_only=True)
+                                       save_best_only=False)
     # 定义模型的验证集生成器
     validation_gen = validation_generator(valid_dir_path,
                                           valid_label_dir_path,
                                           num_image=validation_img_num,
-                                          target_size=img_size)
-    # 训练模型
-    model.fit_generator(train_gen,
-                       validation_data=validation_gen,
-                       validation_steps=1,
-                       steps_per_epoch=train_img_num,
-                       epochs=epochs,
-                       callbacks=[model_checkpoint])
+                                          target_size=img_size,
+                                          epochs=epochs)
+    if USE_AUGMENT:
+        # 训练模型
+        model.fit_generator(train_gen,
+                            validation_data=validation_gen,
+                            validation_steps=int(validation_img_num / 2),
+                            steps_per_epoch=steps_per_epoch,
+                            epochs=epochs,
+                            callbacks=[model_checkpoint])
+    else:
+        # 不使用data augment的训练
+        model.fit_generator(train_gen,
+                            validation_data=validation_gen,
+                            validation_steps=int(validation_img_num / 2),
+                            steps_per_epoch=steps_per_epoch,
+                            epochs=epochs,
+                            callbacks=[model_checkpoint])
 
-    # # 不使用data augment的训练
+
+
+
+
+    #
+    # # 定义训练集生成器的参数，保证生成的图像包括了旋转、平移等变化
+    # data_gen_args = dict(featurewise_center=True,
+    #                      featurewise_std_normalization=True,
+    #                      rotation_range=90,
+    #                      width_shift_range=0.1,
+    #                      height_shift_range=0.1,
+    #                      shear_range=0.05,
+    #                      zoom_range=0.05,
+    #                      horizontal_flip=True,
+    #                      fill_mode='nearest')
+    # # 定义训练集生成器
+    # train_gen = train_generator(batch_size=2,
+    #                            train_path=train_dir_root_path[:-1],
+    #                            image_folder='train',
+    #                            label_folder='label',
+    #                            target_size=img_size,
+    #                            aug_dict=data_gen_args)
+    #
+    # # # 不使用data augment的生成器
+    # # train_gen = train_generator('./retina_train/train',
+    # #                             './retina_train/label',
+    # #                             num_image=train_img_num,
+    # #                             target_size=img_size)
+    #
+    # # 定义模型，默认输入为img_size尺寸
+    # model = U_Net(input_size=img_size + (3,), lr=lr, wd=weight_decay)
+    # # 定义模型的保存路径与监督优化的方式
+    # model_checkpoint = ModelCheckpoint(model_path,
+    #                                    monitor='val_accuracy',
+    #                                    verbose=1,
+    #                                    save_best_only=True)
+    # # 定义模型的验证集生成器
+    # validation_gen = validation_generator(valid_dir_path,
+    #                                       valid_label_dir_path,
+    #                                       num_image=validation_img_num,
+    #                                       target_size=img_size)
+    # # 训练模型
     # model.fit_generator(train_gen,
-    #                     validation_data=validation_gen,
-    #                     validation_steps=1,
-    #                     steps_per_epoch=train_img_num,
-    #                     epochs=10,
-    #                     callbacks=[model_checkpoint])
-
-    print('Finish training. Using lr=', lr)
-
-
-    # # 训练U-Net++模型
-    # model_unetpp = U_Net_plus_plus()
-    # contrast_model_checkpoint = ModelCheckpoint(contrast_model_path,
-    #                                       monitor='val_accuracy',
-    #                                       verbose=1,
-    #                                       save_best_only=True)
-    # validation_gen = validation_generator(valid_dir_path, valid_label_dir_path)
-    # model_unetpp.fit_generator(train_gen,
     #                    validation_data=validation_gen,
     #                    validation_steps=1,
-    #                    steps_per_epoch=300,
-    #                    epochs=10,
-    #                    callbacks=[contrast_model_checkpoint])
-
+    #                    steps_per_epoch=train_img_num,
+    #                    epochs=epochs,
+    #                    callbacks=[model_checkpoint])
+    #
+    # # # 不使用data augment的训练
+    # # model.fit_generator(train_gen,
+    # #                     validation_data=validation_gen,
+    # #                     validation_steps=1,
+    # #                     steps_per_epoch=train_img_num,
+    # #                     epochs=10,
+    # #                     callbacks=[model_checkpoint])
+    #
+    # print('Finish training. Using lr=', lr)
+    #
+    #
+    # # # 训练U-Net++模型
+    # # model_unetpp = U_Net_plus_plus()
+    # # contrast_model_checkpoint = ModelCheckpoint(contrast_model_path,
+    # #                                       monitor='val_accuracy',
+    # #                                       verbose=1,
+    # #                                       save_best_only=True)
+    # # validation_gen = validation_generator(valid_dir_path, valid_label_dir_path)
+    # # model_unetpp.fit_generator(train_gen,
+    # #                    validation_data=validation_gen,
+    # #                    validation_steps=1,
+    # #                    steps_per_epoch=300,
+    # #                    epochs=10,
+    # #                    callbacks=[contrast_model_checkpoint])
+    #
 
 
 

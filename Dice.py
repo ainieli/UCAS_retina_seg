@@ -11,7 +11,7 @@ def DiceLoss(y_true, y_pred):
     #     y_pred_temp = y_pred / 255.
     y_true_temp = y_true
     y_pred_temp = y_pred
-    return 2 * K.sum(y_true_temp * y_pred_temp) / (K.sum(y_pred_temp) + K.sum(y_true_temp))
+    return 1 - (2 * K.sum(y_true_temp * y_pred_temp) / (K.sum(y_pred_temp) + K.sum(y_true_temp)))
 
 
 def Dice(y_true, y_pred):

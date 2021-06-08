@@ -1,3 +1,4 @@
+import keras
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, \
     Conv2DTranspose, Conv2DTranspose, concatenate
@@ -11,7 +12,7 @@ from Dice import DiceLoss
 # 定义U-Net模型
 # 由于U-Net接受的输入是三维的，实际图像是二维的，故input_size需要扩维,
 # 而input_size是tuple，故用 xxx + (1,)表示在末尾扩一维，其中xxx是一个二元组
-def U_Net(input_size=(256, 256, 3), lr=1e-4, wd=1e-4):
+def U_Net(input_size=(256, 256, 1), lr=1e-4, wd=1e-4):
     # 特征提取（4次下采样）
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(wd))(inputs)
@@ -64,8 +65,13 @@ def U_Net(input_size=(256, 256, 3), lr=1e-4, wd=1e-4):
     conv10 = Conv2D(1, 1, activation='sigmoid', kernel_initializer='he_normal', kernel_regularizer=l2(wd))(conv9)
 
     # 编译模型
-    model = Model(input=inputs, output=conv10)
-    model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
+    model = Model(inputs=inputs, outputs=conv10)
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=lr,
+        decay_steps=100,
+        decay_rate=0.96)
+    # model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
+    model.compile(optimizer=Adam(learning_rate=lr_schedule), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
 
     # 打印模型总结
     model.summary()
@@ -73,7 +79,7 @@ def U_Net(input_size=(256, 256, 3), lr=1e-4, wd=1e-4):
 
 
 # 定义U-Net++模型
-def U_Net_plus_plus(input_size=(256, 256, 3), deep_supervision=False, lr=1e-4, wd=1e-4):
+def U_Net_plus_plus(input_size=(256, 256, 1), deep_supervision=False, lr=1e-4, wd=1e-4):
     inputs = Input(input_size)
     conv0_0 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(wd))(inputs)
     conv0_0 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(wd))(conv0_0)
@@ -157,15 +163,20 @@ def U_Net_plus_plus(input_size=(256, 256, 3), deep_supervision=False, lr=1e-4, w
     # 深监督决定输出
     # model = Model(input=inputs, output=conv0_4)
     if deep_supervision:
-        model = Model(input=inputs, output=[nestnet_output_1,
+        model = Model(inputs=inputs, outputs=[nestnet_output_1,
                                                nestnet_output_2,
                                                nestnet_output_3,
                                                nestnet_output_4])
     else:
-        model = Model(input=inputs, output=[nestnet_output_4])
+        model = Model(inputs=inputs, outputs=[nestnet_output_4])
 
+    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=lr,
+        decay_steps=100,
+        decay_rate=0.96)
     # 编译模型
-    model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
+    # model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
+    model.compile(optimizer=Adam(learning_rate=lr_schedule), loss='binary_crossentropy', metrics=['accuracy', DiceLoss])
 
     # 打印模型总结
     model.summary()

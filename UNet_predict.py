@@ -19,6 +19,11 @@ def init_DRIVE():
     test_label_dir_path = './retina_test_label/'
     result_dir_path = './unet_result/'
     unetpp_result_dir_path = './unetpp_result/'
+    try:
+        os.mkdir(result_dir_path)
+        os.mkdir(unetpp_result_dir_path)
+    except:
+        pass
 
     # 图像尺寸
     img_size = (256, 256)                           # 模型输入图像的尺寸
@@ -41,6 +46,11 @@ def init_CHASE():
     test_label_dir_path = './retina_test_label_chase/'
     result_dir_path = './unet_result_chase/'
     unetpp_result_dir_path = './unetpp_result_chase/'
+    try:
+        os.mkdir(result_dir_path)
+        os.mkdir(unetpp_result_dir_path)
+    except:
+        pass
 
     # 图像尺寸
     img_size = (512, 512)  # 模型输入图像的尺寸
@@ -58,10 +68,12 @@ def init_CHASE():
 ########## 测试数据相关 ##########
 # 定义测试集生成器
 # 测试集生成器实际完成读取测试集图片的工作
-def test_generator(test_path, num_image=test_img_num, target_size=img_size):
+def test_generator(test_path, num_image, target_size):
     test_img_name_list = os.listdir(test_dir_path)
     for i in range(num_image):
-        img = cv2.imread(test_path + test_img_name_list[i], cv2.IMREAD_COLOR)
+        # img = cv2.imread(test_path + test_img_name_list[i], cv2.IMREAD_COLOR)
+        # img = img[:, :, 1]
+        img = cv2.imread(test_path + test_img_name_list[i], cv2.IMREAD_GRAYSCALE)
         if np.max(img) > 1:
             img = img / 255
         img = cv2.resize(img, target_size)
@@ -92,11 +104,17 @@ def save_result(save_path, results, original_size):
 ########## 加载模型并预测，保存预测结果 ##########
 # 保存的预测结果为灰度图像，并非二值图像
 if __name__ == "__main__":
-    # init_DRIVE()
-    init_CHASE()
-    model = load_model(model_path, custom_objects={'DiceLoss': DiceLoss})
-    # model = load_model(unetpp_path)
-    test_gene = test_generator(test_dir_path)
+    init_DRIVE()
+    # init_CHASE()
+    MODEL = 'UNET'
+
+    if MODEL == 'UNET':
+        model = load_model(model_path, custom_objects={'DiceLoss': DiceLoss})
+    elif MODEL == 'UNET++':
+        model = load_model(unetpp_path, custom_objects={'DiceLoss': DiceLoss})
+    test_gene = test_generator(test_dir_path, test_img_num, img_size)
     results = model.predict_generator(test_gene, test_img_num, verbose=1)
-    save_result(result_dir_path, results, original_size)
-    # save_result(unetpp_result_dir_path, results, original_size)
+    if MODEL == 'UNET':
+        save_result(result_dir_path, results, original_size)
+    elif MODEL == 'UNET++':
+        save_result(unetpp_result_dir_path, results, original_size)
