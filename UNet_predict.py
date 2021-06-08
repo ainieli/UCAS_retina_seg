@@ -54,7 +54,7 @@ def init_CHASE():
 
     # 图像尺寸
     img_size = (512, 512)  # 模型输入图像的尺寸
-    original_size = (960, 999)  # 原始图像尺寸
+    original_size = (999, 960)  # 原始图像尺寸
 
     # 图片张数
     # test_img_num = 10                             # 测试集张数，指定数目

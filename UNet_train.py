@@ -59,13 +59,13 @@ def init_CHASE():
         total_train_original_img_num, train_img_num, validation_img_num, \
         test_img_num, lr, weight_decay, epochs, steps_per_epoch, batch_size
     # 数据路径
-    train_dir_root_path = './retina_train/'
-    valid_dir_path = './retina_train/valid/'
-    valid_label_dir_path = './retina_train/valid_label/'
+    train_dir_root_path = './retina_train_chase/'
+    valid_dir_path = './retina_train_chase/valid/'
+    valid_label_dir_path = './retina_train_chase/valid_label/'
 
     # 定义图像大小
     img_size = (512, 512)  # 模型输入图像的尺寸
-    original_size = (960, 999)  # 视网膜图像的尺寸，方便resize故行列值已经进行了交换，实际尺寸为584x565
+    original_size = (999, 960)  # 视网膜图像的尺寸，方便resize故行列值已经进行了交换，实际尺寸为584x565
 
     # 定义训练得到的模型保存名
     model_path = './unet_chase.hdf5'
@@ -144,8 +144,8 @@ def train_generator(batch_size, train_path, image_folder, label_folder, aug_dict
 
 # 不使用data augment的generator
 def train_generator_no_aug(train_path, train_label_path, num_image, target_size, epochs):
-    train_img_name_list = os.listdir('./retina_train/train')
-    train_label_name_list = os.listdir('./retina_train/label')
+    train_img_name_list = os.listdir(train_path)
+    train_label_name_list = os.listdir(train_label_path)
     for _ in range(epochs):
         for i in range(num_image):
             img = cv2.imread(train_path + train_img_name_list[i], cv2.IMREAD_GRAYSCALE)
@@ -174,7 +174,7 @@ def train_generator_no_aug(train_path, train_label_path, num_image, target_size,
 # 定义验证集生成器
 # 验证集生成器实际完成读取验证集图片的工作，成对读取原图与标签
 def validation_generator(validation_path, valid_label_path, num_image=10, target_size=(256, 256), epochs=100):
-    valid_img_name_list = os.listdir(valid_dir_path)
+    valid_img_name_list = os.listdir(validation_path)
     valid_label_name_list = os.listdir(valid_label_dir_path)
     for _ in range(epochs):
         for i in range(num_image):
@@ -224,8 +224,8 @@ if __name__ == "__main__":
                                     aug_dict=data_gen_args)
     else:
         # 不使用data augment的生成器
-        train_gen = train_generator_no_aug('./retina_train/train',
-                                    './retina_train/label',
+        train_gen = train_generator_no_aug(train_dir_root_path + 'train',
+                                    train_dir_root_path + 'label',
                                     num_image=train_img_num,
                                     target_size=img_size,
                                     epochs=epochs)
